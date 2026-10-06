@@ -8,6 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from validators import (
     validate_age,
+    validate_child_age,
     validate_contact,
     validate_fio,
     validate_short_text,
@@ -19,11 +20,13 @@ Validator = Callable[[str], str | None]
 
 EVENT_TITLES = {
     "class": "класс",
-    "casting": "кастинг",
+    "casting": "кастинг PRO",
+    "kids": "кастинг ДЕТИ",
 }
 PRICES = {
     "class": 2_000,
     "casting": 3_000,
+    "kids": 2_000,
 }
 DANCE_STYLES = [
     "Hip-Hop",
@@ -82,8 +85,8 @@ CASTING_FIELDS = [
     Field(
         id="age",
         title="Возраст",
-        question="Сколько вам <b>лет</b>? Напишите целое число.\n\n<i>Например: 23</i>",
-        error="Возраст — целое число от 10 до 70. Например: <code>23</code>.",
+        question="Сколько вам <b>лет</b>? Напишите целое число от 15 до 80.\n\n<i>Например: 23</i>",
+        error="Возраст — целое число от 15 до 80. Например: <code>23</code>.",
         validate=validate_age,
     ),
     Field(
@@ -179,11 +182,122 @@ CASTING_FIELDS = [
     ),
 ]
 
+
+
+KIDS_PARENT_FIELDS = [
+    Field(
+        id="child_fio",
+        title="ФИО ребенка",
+        question="Введите <b>ФИО ребенка</b>.",
+        error="Введите ФИО ребенка полностью.",
+        validate=validate_fio,
+    ),
+    Field(
+        id="child_age",
+        title="Возраст ребенка",
+        question="Укажите <b>возраст ребенка</b> — целое число от 10 до 14.\n\n<i>Например: 12</i>",
+        error="Возраст ребенка — целое число от 10 до 14. Например: <code>12</code>.",
+        validate=validate_child_age,
+    ),
+    Field(
+        id="parent_fio",
+        title="ФИО родителя",
+        question="Введите ваше <b>ФИО</b> (родителя).",
+        error="Введите ФИО полностью.",
+        validate=validate_fio,
+    ),
+    Field(
+        id="parent_phone",
+        title="Телефон родителя",
+        question="Оставьте <b>номер телефона родителя</b>.",
+        error="Пришлите российский номер телефона.",
+        validate=validate_contact,
+    ),
+    Field(
+        id="main_styles",
+        title="Основной стиль",
+        question="Какой у ребенка <b>основной стиль</b>?\nВыберите один вариант или добавьте свой.",
+        error="Выберите один основной стиль.",
+        type="single",
+    ),
+    Field(
+        id="other_styles",
+        title="Дополнительные стили",
+        question="В каких ещё стилях ребенок танцует?\nМожно выбрать несколько.",
+        error="Выберите хотя бы один вариант.",
+        type="multi",
+    ),
+    Field(
+        id="experience",
+        title="Как долго танцует",
+        question="Как долго ребенок занимается танцами?",
+        error="Напишите ответ текстом.",
+        validate=lambda text: text.strip() or None,
+    ),
+]
+
+KIDS_CHILD_FIELDS = [
+    Field(
+        id="child_fio",
+        title="ФИО ребенка",
+        question="Напиши <b>твое ФИО</b>.",
+        error="Введите ФИО полностью.",
+        validate=validate_fio,
+    ),
+    Field(
+        id="child_age",
+        title="Возраст ребенка",
+        question="Сколько тебе <b>лет</b>? Напиши целое число от 10 до 14.\n\n<i>Например: 12</i>",
+        error="Возраст — целое число от 10 до 14. Например: <code>12</code>.",
+        validate=validate_child_age,
+    ),
+    Field(
+        id="parent_fio",
+        title="ФИО родителя",
+        question="Укажи <b>ФИО родителя</b>.",
+        error="Введите ФИО полностью.",
+        validate=validate_fio,
+    ),
+    Field(
+        id="parent_phone",
+        title="Телефон родителя",
+        question="Укажи <b>номер телефона родителя</b>.",
+        error="Пришлите российский номер телефона.",
+        validate=validate_contact,
+    ),
+    Field(
+        id="main_styles",
+        title="Основной стиль",
+        question="Какой у тебя <b>основной стиль</b>?\nВыбери один вариант или добавь свой.",
+        error="Выберите один основной стиль.",
+        type="single",
+    ),
+    Field(
+        id="other_styles",
+        title="Дополнительные стили",
+        question="В каких ещё стилях ты танцуешь?\nМожно выбрать несколько.",
+        error="Выберите хотя бы один вариант.",
+        type="multi",
+    ),
+    Field(
+        id="experience",
+        title="Как долго танцует",
+        question="Как долго ты занимаешься танцами?",
+        error="Напишите ответ текстом.",
+        validate=lambda text: text.strip() or None,
+    ),
+]
 OTHER_STYLES_EXTRA = ["Нет других стилей"]
 
 
-def fields_for(event_type: str) -> list[Field]:
-    return CASTING_FIELDS if event_type == "casting" else CLASS_FIELDS
+def fields_for(event_type: str, kids_role: str | None = None) -> list[Field]:
+    if event_type == "casting":
+        return CASTING_FIELDS
+    if event_type == "class":
+        return CLASS_FIELDS
+    if event_type == "kids":
+        return KIDS_PARENT_FIELDS if kids_role == "parent" else KIDS_CHILD_FIELDS
+    return []
 
 
 def field_by_id(fields: list[Field], field_id: str) -> Field:
@@ -211,9 +325,9 @@ def display_value(value: object) -> str:
     return str(value)
 
 
-def format_answers(event_type: str, answers: dict) -> str:
+def format_answers(event_type: str, answers: dict, kids_role: str | None = None) -> str:
     lines = []
-    for field in fields_for(event_type):
+    for field in fields_for(event_type, kids_role):
         if field.id not in answers:
             continue
         value = escape(display_value(answers[field.id])).replace("\n", "\n")
@@ -221,8 +335,8 @@ def format_answers(event_type: str, answers: dict) -> str:
     return "\n".join(lines)
 
 
-def answered_fields(event_type: str, answers: dict, current_index: int) -> list[Field]:
-    fields = fields_for(event_type)
+def answered_fields(event_type: str, answers: dict, current_index: int, kids_role: str | None = None) -> list[Field]:
+    fields = fields_for(event_type, kids_role)
     result = []
     for index, field in enumerate(fields):
         if index < current_index and field.id in answers:
@@ -359,17 +473,42 @@ def resume_keyboard(event_type: str) -> InlineKeyboardMarkup:
     )
 
 
-def already_registered_keyboard() -> InlineKeyboardMarkup:
+def already_registered_keyboard(
+    event_type: str | None = None,
+    *,
+    allow_another: bool = False,
+) -> InlineKeyboardMarkup:
+    rows = []
+    if allow_another:
+        rows.append(
+            [
+                InlineKeyboardButton(
+                    text="➕ Записать ещё одного ребенка",
+                    callback_data="kids_another_child",
+                )
+            ]
+        )
+    rows.append([InlineKeyboardButton(text="⬅️ Назад", callback_data="signup")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def kids_registered_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="⬅️ Назад", callback_data="signup")]
+            [
+                InlineKeyboardButton(
+                    text="➕ Записать ещё одного ребенка",
+                    callback_data="kids_another_child",
+                )
+            ],
+            [InlineKeyboardButton(text="🏠 На главную", callback_data="back_home")],
         ]
     )
 
 
-def resume_text(event_type: str, draft: dict) -> str:
+def resume_text(event_type: str, draft: dict, kids_role: str | None = None) -> str:
     title = event_title(event_type)
-    fields = fields_for(event_type)
+    fields = fields_for(event_type, kids_role or draft.get("kids_role"))
     if draft.get("status") == "waiting_payment":
         return (
             f"Анкета на <b>{title}</b> уже заполнена, осталась оплата.\n\n"
@@ -383,12 +522,62 @@ def resume_text(event_type: str, draft: dict) -> str:
     )
 
 
-def already_registered_text(event_type: str) -> str:
+def already_registered_text(event_type: str, draft: dict | None = None) -> str:
     title = event_title(event_type)
+    if event_type == "kids" and draft and draft.get("self_registered"):
+        fio = str(
+            draft.get("self_child_fio")
+            or (draft.get("answers") or {}).get("child_fio")
+            or ""
+        ).strip()
+        fio_line = f"\n<b>ФИО:</b> {escape(fio)}" if fio else ""
+        return (
+            f"Вы уже записаны на <b>кастинг ДЕТИ</b>.{fio_line}\n"
+            "Повторная запись недоступна.\n"
+            "Если нужно что-то поменять — напишите Саше @atkrevalexa."
+        )
+    if event_type == "kids":
+        names = []
+        if draft:
+            names = [
+                str(name).strip()
+                for name in (draft.get("registered_children") or [])
+                if str(name).strip()
+            ]
+            if not names:
+                child = str((draft.get("answers") or {}).get("child_fio") or "").strip()
+                if child:
+                    names = [child]
+        if len(names) == 1:
+            listed = f"<b>{escape(names[0])}</b>"
+            intro = f"Записан ребенок: {listed}."
+        elif names:
+            listed = "\n".join(f"• <b>{escape(name)}</b>" for name in names)
+            intro = f"Уже записаны дети:\n{listed}"
+        else:
+            intro = "Ребенок уже записан на <b>кастинг ДЕТИ</b>."
+        return (
+            f"{intro}\n"
+            "Если нужно что-то поменять — напишите Саше @atkrevalexa."
+        )
     return (
         f"Вы уже записаны на <b>{title}</b>.\n"
         "Если нужно что-то поменять — напишите Саше @atkrevalexa."
     )
+
+
+def kids_role_keyboard() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(text="👨‍👩‍👧 Я родитель", callback_data="kids_role:parent")],
+            [InlineKeyboardButton(text="🧒 Я ребенок", callback_data="kids_role:child")],
+            [InlineKeyboardButton(text="⬅️ Назад", callback_data="signup")],
+        ]
+    )
+
+
+def kids_role_text() -> str:
+    return "Выберите, кто заполняет анкету:"
 
 
 def payment_text(event_type: str, requisites: str) -> str:
@@ -409,7 +598,7 @@ def payment_text(event_type: str, requisites: str) -> str:
 def registered_text(event_type: str, answers: dict) -> str:
     title = event_title(event_type)
     amount = format_price(price_for(event_type))
-    fio = escape(str(answers.get("fio", "")))
+    fio = escape(str(answers.get("fio") or answers.get("child_fio") or ""))
     extra = ""
     if event_type == "casting":
         extra = (
@@ -428,13 +617,40 @@ def registered_text(event_type: str, answers: dict) -> str:
     )
 
 
-def admin_summary(event_type: str, answers: dict, user_line: str) -> str:
+def kids_parent_paid_text(answers: dict, parent_chat_url: str) -> str:
+    child_fio = escape(str((answers or {}).get("child_fio") or "").strip() or "ребенок")
+    amount = format_price(price_for("kids"))
+    text = (
+        f"✅ Записан ребенок: <b>{child_fio}</b>\n\n"
+        f"<b>Формат:</b> {event_title('kids')}\n"
+        f"<b>Сумма:</b> {amount}\n"
+        "<b>Когда:</b> 10 октября, 18:00–22:00\n"
+        "<b>Где:</b> зал «Графит» 8count · м. Преображенская\n"
+    )
+    if parent_chat_url:
+        text += (
+            "\nДля связи и дальнейших шагов перейдите в чат:\n"
+            f"{parent_chat_url}"
+        )
+    return text
+
+
+def admin_summary(
+    event_type: str,
+    answers: dict,
+    user_line: str,
+    kids_role: str | None = None,
+) -> str:
     title = event_title(event_type)
     amount = format_price(price_for(event_type))
+    role_line = ""
+    if event_type == "kids" and kids_role:
+        role_line = f"<b>Кто заполнял:</b> {'родитель' if kids_role == 'parent' else 'ребенок'}\n"
     return (
         "💰 <b>Скрин оплаты</b>\n\n"
         f"{user_line}\n"
         f"<b>Формат:</b> {title}\n"
+        f"{role_line}"
         f"<b>Сумма:</b> {amount}\n\n"
-        f"{format_answers(event_type, answers)}"
+        f"{format_answers(event_type, answers, kids_role)}"
     )

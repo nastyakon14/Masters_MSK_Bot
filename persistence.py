@@ -36,7 +36,9 @@ class Persistence:
         answers: dict,
         current_index: int,
         status: str,
-    ) -> None:
+        kids_role: str | None = None,
+        record_id: int | None = None,
+    ) -> int | None:
         record = {
             "user_id": user.id,
             "event_type": event_type,
@@ -46,9 +48,11 @@ class Persistence:
             "current_index": current_index,
             "answers": answers,
             "price": price_for(event_type),
+            "kids_role": kids_role,
+            "record_id": record_id,
             "payment": PAID if status == "registered" else UNPAID,
         }
-        self.db.upsert_registration(record)
+        saved_id = self.db.upsert_registration(record)
         errors: list[Exception] = []
         try:
             self.excel.upsert(record)
@@ -61,10 +65,20 @@ class Persistence:
             logging.exception("Не удалось обновить Google Sheets")
             errors.append(exc)
         if errors:
-            raise errors[0]
+            logging.error("Запись сохранена в базу, синхронизация: %s", errors[0])
+        return saved_id
 
     def get_draft(self, user_id: int, event_type: str) -> dict | None:
         return self.db.get_registration(user_id, event_type)
+
+    def sync_sheets(self, event_type: str | None = None) -> int:
+        types = [event_type] if event_type else ["casting", "class", "kids"]
+        count = 0
+        for current in types:
+            for record in self.db.list_registrations(current):
+                self.sheets.upsert(record)
+                count += 1
+        return count
 
 
 persist = Persistence()

@@ -2,7 +2,7 @@ from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
 
-from storage_common import SHEET_TITLES, sheet_headers, sheet_values
+from storage_common import SHEET_TITLES, sheet_headers, sheet_row_matches, sheet_values
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
 EXCEL_PATH = DATA_DIR / "registrations.xlsx"
@@ -39,8 +39,13 @@ class ExcelStore:
                 sheet.cell(1, index, column)
 
         target = None
+        header_row = [cell.value for cell in sheet[1]]
         for excel_row in range(2, sheet.max_row + 1):
-            if str(sheet.cell(excel_row, 1).value) == str(record["user_id"]):
+            current = [
+                "" if sheet.cell(excel_row, col).value is None else str(sheet.cell(excel_row, col).value)
+                for col in range(1, len(header_row) + 1)
+            ]
+            if sheet_row_matches([str(item or "") for item in header_row], current, record):
                 target = excel_row
                 break
 

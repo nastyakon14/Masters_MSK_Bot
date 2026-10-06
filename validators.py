@@ -40,7 +40,7 @@ def validate_age(text: str) -> str | None:
     if not match:
         return None
     age = int(match.group(1))
-    if not 10 <= age <= 70:
+    if not 15 <= age <= 80:
         return None
     return str(age)
 
@@ -66,3 +66,14 @@ def validate_custom_style(text: str) -> str | None:
     if not CUSTOM_STYLE_RE.fullmatch(raw):
         return None
     return raw
+
+
+def validate_child_age(text: str) -> str | None:
+    raw = text.strip().lower()
+    match = re.fullmatch(r"(\d{1,2})\s*(?:год|года|лет)?", raw)
+    if not match:
+        return None
+    age = int(match.group(1))
+    if not 10 <= age <= 14:
+        return None
+    return str(age)
